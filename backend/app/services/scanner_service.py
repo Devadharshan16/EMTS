@@ -40,22 +40,34 @@ def analyze_code_for_secrets(code_snippet: str, file_name: str) -> ScanReport:
 
     prompt = f"Analyze the following code from the file '{file_name}':\n\n{code_snippet}"
 
-    try:
-        response = client.models.generate_content(
-            model='gemini-3.5-flash',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                response_mime_type="application/json",
-                response_schema=ScanReport,
-                temperature=0.1
+    models_to_try = ['gemini-3.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite']
+    last_error = None
+
+    for model_name in models_to_try:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    response_mime_type="application/json",
+                    response_schema=ScanReport,
+                    temperature=0.1
+                )
             )
-        )
-        
-        if not response.text:
-            raise ValueError("No content was returned by the AI model.")
             
-        # Parse and return validated Pydantic model
-        return ScanReport.model_validate_json(response.text)
-    except Exception as e:
-        raise RuntimeError(f"AI Scanner service exception: {str(e)}")
+            if not response.text:
+                raise ValueError("No content was returned by the AI model.")
+                
+            # Parse and return validated Pydantic model
+            return ScanReport.model_validate_json(response.text)
+        except Exception as e:
+            last_error = e
+            # If quota exhausted (429), try next model
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                continue
+            # For other errors, don't retry
+            raise RuntimeError(f"AI Scanner service exception: {str(e)}")
+
+    # All models exhausted — raise the last error
+    raise RuntimeError(f"AI Scanner service exception (all models exhausted): {str(last_error)}")
