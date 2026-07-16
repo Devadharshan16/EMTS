@@ -80,7 +80,7 @@ export const Scanner = () => {
           AI Leak Scanner
         </h1>
         <p className="text-slate-400 text-sm mt-1">
-          Scan source code snippets using Google Gemini 2.5 Flash for hardcoded API keys, tokens, or credential leaks.
+          Scan source code snippets using Google Gemini 3.5 Flash for hardcoded API keys, tokens, or credential leaks.
         </p>
       </div>
 
