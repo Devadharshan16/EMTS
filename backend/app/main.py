@@ -23,7 +23,9 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Add custom Middlewares (Ordering matters: CORS -> Audit -> SlowAPI)
+# Add custom Middlewares (In Starlette, LAST added = OUTERMOST. CORS must be outermost.)
+app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(AuditLogMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -33,11 +35,9 @@ app.add_middleware(
         os.getenv("FRONTEND_URL", "http://localhost:5173"),
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-app.add_middleware(AuditLogMiddleware)
-app.add_middleware(SlowAPIMiddleware)
 
 # Include Router endpoints under the "/api" route space
 app.include_router(auth.router, prefix="/api")
