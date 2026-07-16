@@ -90,3 +90,23 @@ class ScanResult(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     organization = relationship("Organization", back_populates="scan_results")
+
+
+# ============================================================================
+# AUDIT LOG SECURITY: Append-Only Enforcement
+# These ORM-level event listeners guarantee that audit_logs can never be
+# modified or deleted through SQLAlchemy. This is a critical security control.
+# ============================================================================
+from sqlalchemy import event
+
+@event.listens_for(AuditLog, "before_update")
+def _block_audit_update(mapper, connection, target):
+    raise RuntimeError(
+        "SECURITY VIOLATION: Audit logs are strictly append-only. Updates are forbidden."
+    )
+
+@event.listens_for(AuditLog, "before_delete")
+def _block_audit_delete(mapper, connection, target):
+    raise RuntimeError(
+        "SECURITY VIOLATION: Audit logs are strictly append-only. Deletes are forbidden."
+    )
